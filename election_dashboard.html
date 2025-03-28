@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🗳️ Election System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .card { background: #f0f0f0; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <h1>🗳️ Election System Dashboard</h1>
+    
+    <div class="card">
+        <h2>🏆 Current Results</h2>
+        {% if winner_name %}
+        <p>Winner: <strong>{{ winner_name }}</strong> with {{ winner_votes }} votes</p>
+        {% else %}
+        <p>No votes cast yet</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>👥 Candidates</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Votes</th>
+            </tr>
+            {% for candidate in candidates %}
+            <tr>
+                <td>{{ candidate.id }}</td>
+                <td>{{ candidate.name }}</td>
+                <td>{{ candidate.votes }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>➕ Add Candidate</h2>
+        <input type="text" id="candidateName" placeholder="Candidate name">
+        <button onclick="addCandidate()">Add Candidate</button>
+    </div>
+
+    <div class="card">
+        <h2>👤 Register Voter</h2>
+        <input type="text" id="voterAddress" placeholder="0.0.1234">
+        <button onclick="registerVoter()">Register Voter</button>
+    </div>
+
+    <div class="card">
+        <h2>✍️ Cast Vote</h2>
+        <input type="number" id="candidateId" placeholder="Candidate ID">
+        <button onclick="castVote()">Vote</button>
+    </div>
+
+    <script>
+        async function addCandidate() {
+            const name = document.getElementById('candidateName').value;
+            const response = await fetch('/election/add_candidate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+            alert(result.status + ": " + (result.message || result.error));
+            if (response.ok) location.reload();
+        }
+
+        async function registerVoter() {
+            const address = document.getElementById('voterAddress').value;
+            const response = await fetch('/election/register_voter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address })
+            });
+            const result = await response.json();
+            alert(result.status + ": " + (result.message || result.error));
+        }
+
+        async function castVote() {
+            const candidateId = document.getElementById('candidateId').value;
+            const response = await fetch('/election/vote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidate_id: candidateId })
+            });
+            const result = await response.json();
+            alert(result.status + ": " + (result.message || result.error));
+            if (response.ok) location.reload();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cast Your Vote</title>
+    <style>
+        :root {
+            --primary: #4e44ce;
+            --secondary: #6e8efb;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .logo { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        
+        .vote-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .candidate-card {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .candidate-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        
+        .vote-btn {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        
+        .already-voted {
+            color: var(--primary);
+            font-weight: bold;
+            text-align: center;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">🗳️ BlockVote</div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/results">Results</a>
+            <span id="wallet-display" style="font-weight:bold; color: var(--primary);"></span>
+        </nav>
+    </header>
+
+    <main class="vote-container">
+        <h1>Cast Your Vote</h1>
+        <div id="candidates-list">
+            <p>Loading candidates...</p>
+        </div>
+        
+        <div id="voting-status" style="display:none;">
+            <p class="already-voted">You have already voted in this election.</p>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script>
+        // DOM Elements
+        const candidatesList = document.getElementById('candidates-list');
+        const votingStatus = document.getElementById('voting-status');
+        
+        // Load candidates when page loads
+        window.addEventListener('load', loadCandidates);
+
+        async function loadCandidates() {
+            try {
+                // Fetch candidates from Flask API
+                const response = await fetch('/candidates');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load candidates');
+                }
+                
+                const candidates = await response.json();
+                
+                // Display candidates
+                candidatesList.innerHTML = '';
+                candidates.forEach(candidate => {
+                    const card = document.createElement('div');
+                    card.className = 'candidate-card';
+                    card.innerHTML = `
+                        <div style="flex-grow: 1;">
+                            <h3>${candidate.name}</h3>
+                            <p>Current Votes: ${candidate.votes}</p>
+                        </div>
+                        <button class="vote-btn" data-candidate-id="${candidate.id}">
+                            Vote
+                        </button>
+                    `;
+                    candidatesList.appendChild(card);
+                });
+                
+                // Add click handlers
+                document.querySelectorAll('.vote-btn').forEach(btn => {
+                    btn.addEventListener('click', handleVote);
+                });
+                
+            } catch (error) {
+                console.error('Error:', error);
+                candidatesList.innerHTML = `
+                    <div class="error">
+                        Failed to load candidates. Please try again later.
+                    </div>
+                `;
+            }
+        }
+
+        async function handleVote(event) {
+            const button = event.currentTarget;
+            const candidateId = button.dataset.candidateId;
+            
+            try {
+                // Connect wallet
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                const userAddress = accounts[0];
+                
+                // Display wallet address
+                document.getElementById('wallet-display').textContent = 
+                    `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+                
+                // Disable button during voting
+                button.disabled = true;
+                button.textContent = 'Processing...';
+                
+                // Send vote request
+                const response = await fetch('/vote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        candidate_id: parseInt(candidateId),
+                        user_address: userAddress
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Vote successfully recorded!');
+                    // Refresh candidates
+                    loadCandidates();
+                } else {
+                    throw new Error(result.error || 'Voting failed');
+                }
+                
+            } catch (error) {
+                console.error('Voting error:', error);
+                alert(`Error: ${error.message}`);
+                button.disabled = false;
+                button.textContent = 'Vote';
+            }
+        }
+    </script>
+	<script>
+		async function submitVote(candidateId) {
+			try {
+				// 1. Get user address
+				const accounts = await window.ethereum.request({ 
+					method: 'eth_requestAccounts' 
+				});
+				const userAddress = accounts[0];
+		
+				// 2. Send vote request
+				const response = await fetch('/vote', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						candidate_id: parseInt(candidateId), // Ensure number
+						user_address: userAddress
+					})
+				});
+		
+				// 3. Handle response
+				const result = await response.json();
+				if (!response.ok) throw new Error(result.error || 'Voting failed');
+				
+				alert(`Vote successful! Transaction hash: ${result.txn_hash}`);
+				console.log("Receipt:", result);
+				
+			} catch (error) {
+				console.error("Voting error:", error);
+				alert(`Error: ${error.message}`);
+			}
+		}
+		
+		// Attach to vote buttons
+		document.querySelectorAll('.vote-btn').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				const candidateId = e.target.dataset.candidateId;
+				submitVote(candidateId);
+			});
+		});
+		</script>
+</body>
+</html>

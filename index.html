@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Voting System</title>
+    <style>
+        /* ===== GLOBAL STYLES ===== */
+        :root {
+            --primary: #4e44ce;
+            --secondary: #6e8efb;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+            --success: #2ecc71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f5f7fa;
+        }
+
+        /* ===== HEADER STYLES ===== */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        nav a {
+            margin: 0 1rem;
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        nav a.disabled {
+            color: #ccc;
+            pointer-events: none;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #3a32a0;
+            transform: translateY(-2px);
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4rem 5%;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: white;
+        }
+
+        .hero-content {
+            max-width: 50%;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .hero-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        /* ===== STEPS SECTION ===== */
+        .steps {
+            padding: 4rem 5%;
+            text-align: center;
+        }
+
+        .steps h2 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: var(--dark);
+        }
+
+        .step-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .step {
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .step:hover {
+            transform: translateY(-10px);
+        }
+
+        .step-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            background: var(--primary);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .step h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        /* ===== STATS SECTION ===== */
+        .stats {
+            padding: 4rem 5%;
+            background: var(--light);
+            text-align: center;
+        }
+
+        .stats h2 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: var(--dark);
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .stat-card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .stat-card p {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background: var(--dark);
+            color: white;
+        }
+
+        footer a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                padding: 1rem;
+            }
+            
+            nav {
+                margin: 1rem 0;
+            }
+            
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                padding: 3rem 1rem;
+            }
+            
+            .hero-content {
+                max-width: 100%;
+                margin-bottom: 2rem;
+            }
+            
+            .step {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <header>
+        <div class="logo">🗳️ BlockVote</div>
+        <nav>
+            <a href="/" class="active">Home</a>
+            <!-- Update the vote link to point to the Flask route -->
+            <a href="/vote" id="vote-link" class="disabled">Vote</a>
+            <a href="/results">Results</a>
+            <a href="admin.html" id="admin-link" style="display:none">Admin</a>
+        </nav>
+        <button id="connect-wallet">Connect Wallet</button>
+        
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Secure Your Vote with Blockchain</h1>
+            <p>One wallet, one vote - Tamper-proof elections powered by Hedera Hashgraph</p>
+            <button id="hero-connect">Connect Wallet to Begin</button>
+        </div>
+        <div class="hero-image">
+            <img src="https://i.imgur.com/JQhT3EH.png" alt="Blockchain voting illustration">
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="steps">
+        <h2>How It Works</h2>
+        <div class="step-container">
+            <div class="step">
+                <div class="step-icon">1</div>
+                <h3>Connect Wallet</h3>
+                <p>Link your MetaMask or HashPack wallet to verify your identity</p>
+            </div>
+            <div class="step">
+                <div class="step-icon">2</div>
+                <h3>Verify Eligibility</h3>
+                <p>Our smart contract checks if you're registered to vote</p>
+            </div>
+            <div class="step">
+                <div class="step-icon">3</div>
+                <h3>Cast Your Vote</h3>
+                <p>Select your candidate and submit to the blockchain</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <h2>Live Election Data</h2>
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Total Votes Cast</h3>
+                <p id="total-votes">-</p>
+            </div>
+            <div class="stat-card">
+                <h3>Registered Voters</h3>
+                <p id="registered-voters">-</p>
+            </div>
+            <div class="stat-card">
+                <h3>Voting Ends In</h3>
+                <p id="time-remaining">-</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>Smart Contract: <a href="#" id="contract-link">View on Explorer</a></p>
+        <p><small>Note: Voting requires a small gas fee</small></p>
+        <p><small>© 2023 BlockVote | Powered by Hedera Hashgraph</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script>
+        // Debug check
+        console.log("Script loaded successfully!");
+        
+       // DOM Elements
+const connectBtn = document.getElementById('connect-wallet');
+const heroConnectBtn = document.getElementById('hero-connect');
+const voteLink = document.getElementById('vote-link');
+
+// Wallet connection function
+
+// Wallet connection function
+async function connectWallet() {
+    console.log("Connect button clicked");
+
+    try {
+        // First, check if MetaMask is available
+        if (window.ethereum && window.ethereum.isMetaMask) {
+            // Request account access from MetaMask
+            const accounts = await window.ethereum.request({
+                method: 'eth_requestAccounts'
+            });
+
+            if (accounts.length === 0) {
+                throw new Error("No accounts found");
+            }
+
+            // Success! Update UI for MetaMask
+            const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+            connectBtn.textContent = "Disconnect Wallet"; // Change button text
+            heroConnectBtn.textContent = `Connected: ${shortAddress}`;
+            voteLink.classList.remove('disabled');
+
+            // Add event listener to disconnect when the button is clicked
+            connectBtn.removeEventListener('click', connectWallet);
+            connectBtn.addEventListener('click', disconnectWallet);
+
+            console.log("Connected to MetaMask:", accounts[0]);
+            alert(`Connected successfully as ${shortAddress}`);
+        } else if (window.solana && window.solana.isPhantom) {
+            // If MetaMask is not available, check if Phantom wallet is available
+            const accounts = await window.solana.request({ method: 'connect' });
+
+            if (accounts.length === 0) {
+                throw new Error("No accounts found in Phantom");
+            }
+
+            // Success! Update UI for Phantom
+            const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+            connectBtn.textContent = "Disconnect Wallet"; // Change button text
+            heroConnectBtn.textContent = `Connected: ${shortAddress}`;
+            voteLink.classList.remove('disabled');
+
+            // Add event listener to disconnect when the button is clicked
+            connectBtn.removeEventListener('click', connectWallet);
+            connectBtn.addEventListener('click', disconnectWallet);
+
+            console.log("Connected to Phantom:", accounts[0]);
+            alert(`Connected successfully as ${shortAddress}`);
+        } else {
+            throw new Error("Please install MetaMask or Phantom wallet extension!");
+        }
+    } catch (error) {
+        console.error("Connection failed:", error);
+        alert(error.message);
+    }
+}
+
+
+// Wallet disconnection function
+function disconnectWallet() {
+    console.log("Disconnect button clicked");
+
+    // Reset the UI
+    connectBtn.textContent = "Connect Wallet"; // Change button text
+    heroConnectBtn.textContent = "Connect Wallet to Begin";
+    voteLink.classList.add('disabled');
+
+    // Remove the event listener for disconnection
+    connectBtn.removeEventListener('click', disconnectWallet);
+    connectBtn.addEventListener('click', connectWallet);
+    
+    alert("Disconnected successfully!");
+}
+
+// Check if wallet is already connected on page load
+async function checkConnectedWallet() {
+    if (window.ethereum) {
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+                const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                connectBtn.textContent = "Disconnect Wallet"; // Change button text
+                heroConnectBtn.textContent = `Connected: ${shortAddress}`;
+                voteLink.classList.remove('disabled');
+
+                // Add event listener to disconnect when the button is clicked
+                connectBtn.removeEventListener('click', connectWallet);
+                connectBtn.addEventListener('click', disconnectWallet);
+            }
+        } catch (error) {
+            console.error("Error checking accounts:", error);
+        }
+    }
+}
+
+// Event Listeners
+connectBtn.addEventListener('click', connectWallet);
+heroConnectBtn.addEventListener('click', connectWallet);
+
+// Initialize on page load
+window.addEventListener('load', checkConnectedWallet);
+
+    </script>
+</body>
+</html>
