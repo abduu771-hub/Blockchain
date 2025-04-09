@@ -106,11 +106,55 @@
             opacity: 0.9;
         }
 
-        .hero-image img {
-            max-width: 100%;
-            height: auto;
+        .hero-image {
+            position: relative;
+            width: 40%;
+            min-width: 300px;
+        }
+
+        .blockchain-animation {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: rgba(255,255,255,0.1);
             border-radius: 10px;
+            overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .coin {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: gold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--dark);
+            box-shadow: 0 0 10px rgba(255,215,0,0.7);
+            animation: float 3s ease-in-out infinite;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .block {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            color: white;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -10px); }
+            50% { transform: translate(-50%, 10px); }
         }
 
         /* ===== STEPS SECTION ===== */
@@ -241,6 +285,11 @@
                 margin-bottom: 2rem;
             }
             
+            .hero-image {
+                width: 100%;
+                min-width: auto;
+            }
+            
             .step {
                 min-width: 100%;
             }
@@ -253,13 +302,11 @@
         <div class="logo">🗳️ BlockVote</div>
         <nav>
             <a href="/" class="active">Home</a>
-            <!-- Update the vote link to point to the Flask route -->
             <a href="/vote" id="vote-link" class="disabled">Vote</a>
             <a href="/results">Results</a>
             <a href="admin.html" id="admin-link" style="display:none">Admin</a>
         </nav>
         <button id="connect-wallet">Connect Wallet</button>
-        
     </header>
 
     <!-- Hero Section -->
@@ -270,7 +317,13 @@
             <button id="hero-connect">Connect Wallet to Begin</button>
         </div>
         <div class="hero-image">
-            <img src="https://i.imgur.com/JQhT3EH.png" alt="Blockchain voting illustration">
+            <div class="blockchain-animation">
+                <div class="coin">HBAR</div>
+                <div class="block" style="bottom: 20px; left: 20%;">Block 1</div>
+                <div class="block" style="bottom: 40px; left: 40%;">Block 2</div>
+                <div class="block" style="bottom: 60px; left: 60%;">Block 3</div>
+                <div class="block" style="bottom: 80px; left: 80%;">Block 4</div>
+            </div>
         </div>
     </section>
 
@@ -325,118 +378,133 @@
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <script>
-        // Debug check
-        console.log("Script loaded successfully!");
-        
-       // DOM Elements
-const connectBtn = document.getElementById('connect-wallet');
-const heroConnectBtn = document.getElementById('hero-connect');
-const voteLink = document.getElementById('vote-link');
+        // DOM Elements
+        const connectBtn = document.getElementById('connect-wallet');
+        const heroConnectBtn = document.getElementById('hero-connect');
+        const voteLink = document.getElementById('vote-link');
 
-// Wallet connection function
+        // Wallet connection function
+        async function connectWallet() {
+            console.log("Connect button clicked");
 
-// Wallet connection function
-async function connectWallet() {
-    console.log("Connect button clicked");
+            try {
+                // First, check if MetaMask is available
+                if (window.ethereum && window.ethereum.isMetaMask) {
+                    // Request account access from MetaMask
+                    const accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
 
-    try {
-        // First, check if MetaMask is available
-        if (window.ethereum && window.ethereum.isMetaMask) {
-            // Request account access from MetaMask
-            const accounts = await window.ethereum.request({
-                method: 'eth_requestAccounts'
+                    if (accounts.length === 0) {
+                        throw new Error("No accounts found");
+                    }
+
+                    // Success! Update UI for MetaMask
+                    const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    connectBtn.textContent = "Disconnect Wallet";
+                    heroConnectBtn.textContent = `Connected: ${shortAddress}`;
+                    voteLink.classList.remove('disabled');
+
+                    // Add event listener to disconnect when the button is clicked
+                    connectBtn.removeEventListener('click', connectWallet);
+                    connectBtn.addEventListener('click', disconnectWallet);
+
+                    console.log("Connected to MetaMask:", accounts[0]);
+                    alert(`Connected successfully as ${shortAddress}`);
+                } else if (window.solana && window.solana.isPhantom) {
+                    // If MetaMask is not available, check if Phantom wallet is available
+                    const accounts = await window.solana.request({ method: 'connect' });
+
+                    if (accounts.length === 0) {
+                        throw new Error("No accounts found in Phantom");
+                    }
+
+                    // Success! Update UI for Phantom
+                    const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    connectBtn.textContent = "Disconnect Wallet";
+                    heroConnectBtn.textContent = `Connected: ${shortAddress}`;
+                    voteLink.classList.remove('disabled');
+
+                    // Add event listener to disconnect when the button is clicked
+                    connectBtn.removeEventListener('click', connectWallet);
+                    connectBtn.addEventListener('click', disconnectWallet);
+
+                    console.log("Connected to Phantom:", accounts[0]);
+                    alert(`Connected successfully as ${shortAddress}`);
+                } else {
+                    throw new Error("Please install MetaMask or Phantom wallet extension!");
+                }
+            } catch (error) {
+                console.error("Connection failed:", error);
+                alert(error.message);
+            }
+        }
+
+        // Wallet disconnection function
+        function disconnectWallet() {
+            console.log("Disconnect button clicked");
+
+            // Reset the UI
+            connectBtn.textContent = "Connect Wallet";
+            heroConnectBtn.textContent = "Connect Wallet to Begin";
+            voteLink.classList.add('disabled');
+
+            // Remove the event listener for disconnection
+            connectBtn.removeEventListener('click', disconnectWallet);
+            connectBtn.addEventListener('click', connectWallet);
+            
+            alert("Disconnected successfully!");
+        }
+
+        // Check if wallet is already connected on page load
+        async function checkConnectedWallet() {
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                        connectBtn.textContent = "Disconnect Wallet";
+                        heroConnectBtn.textContent = `Connected: ${shortAddress}`;
+                        voteLink.classList.remove('disabled');
+
+                        // Add event listener to disconnect when the button is clicked
+                        connectBtn.removeEventListener('click', connectWallet);
+                        connectBtn.addEventListener('click', disconnectWallet);
+                    }
+                } catch (error) {
+                    console.error("Error checking accounts:", error);
+                }
+            }
+        }
+
+        // Event Listeners
+        connectBtn.addEventListener('click', connectWallet);
+        heroConnectBtn.addEventListener('click', connectWallet);
+
+        // Initialize on page load
+        window.addEventListener('load', checkConnectedWallet);
+
+        // Animation for blockchain blocks
+        function animateBlocks() {
+            const blocks = document.querySelectorAll('.block');
+            blocks.forEach((block, index) => {
+                // Random delay for each block
+                block.style.animation = `pulse ${2 + Math.random()}s ease-in-out infinite ${index * 0.3}s`;
             });
-
-            if (accounts.length === 0) {
-                throw new Error("No accounts found");
-            }
-
-            // Success! Update UI for MetaMask
-            const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
-            connectBtn.textContent = "Disconnect Wallet"; // Change button text
-            heroConnectBtn.textContent = `Connected: ${shortAddress}`;
-            voteLink.classList.remove('disabled');
-
-            // Add event listener to disconnect when the button is clicked
-            connectBtn.removeEventListener('click', connectWallet);
-            connectBtn.addEventListener('click', disconnectWallet);
-
-            console.log("Connected to MetaMask:", accounts[0]);
-            alert(`Connected successfully as ${shortAddress}`);
-        } else if (window.solana && window.solana.isPhantom) {
-            // If MetaMask is not available, check if Phantom wallet is available
-            const accounts = await window.solana.request({ method: 'connect' });
-
-            if (accounts.length === 0) {
-                throw new Error("No accounts found in Phantom");
-            }
-
-            // Success! Update UI for Phantom
-            const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
-            connectBtn.textContent = "Disconnect Wallet"; // Change button text
-            heroConnectBtn.textContent = `Connected: ${shortAddress}`;
-            voteLink.classList.remove('disabled');
-
-            // Add event listener to disconnect when the button is clicked
-            connectBtn.removeEventListener('click', connectWallet);
-            connectBtn.addEventListener('click', disconnectWallet);
-
-            console.log("Connected to Phantom:", accounts[0]);
-            alert(`Connected successfully as ${shortAddress}`);
-        } else {
-            throw new Error("Please install MetaMask or Phantom wallet extension!");
         }
-    } catch (error) {
-        console.error("Connection failed:", error);
-        alert(error.message);
-    }
-}
 
-
-// Wallet disconnection function
-function disconnectWallet() {
-    console.log("Disconnect button clicked");
-
-    // Reset the UI
-    connectBtn.textContent = "Connect Wallet"; // Change button text
-    heroConnectBtn.textContent = "Connect Wallet to Begin";
-    voteLink.classList.add('disabled');
-
-    // Remove the event listener for disconnection
-    connectBtn.removeEventListener('click', disconnectWallet);
-    connectBtn.addEventListener('click', connectWallet);
-    
-    alert("Disconnected successfully!");
-}
-
-// Check if wallet is already connected on page load
-async function checkConnectedWallet() {
-    if (window.ethereum) {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-            if (accounts.length > 0) {
-                const shortAddress = `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
-                connectBtn.textContent = "Disconnect Wallet"; // Change button text
-                heroConnectBtn.textContent = `Connected: ${shortAddress}`;
-                voteLink.classList.remove('disabled');
-
-                // Add event listener to disconnect when the button is clicked
-                connectBtn.removeEventListener('click', connectWallet);
-                connectBtn.addEventListener('click', disconnectWallet);
+        // Add animation styles dynamically
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { transform: translateY(0); opacity: 0.8; }
+                50% { transform: translateY(-5px); opacity: 1; }
             }
-        } catch (error) {
-            console.error("Error checking accounts:", error);
-        }
-    }
-}
+        `;
+        document.head.appendChild(style);
 
-// Event Listeners
-connectBtn.addEventListener('click', connectWallet);
-heroConnectBtn.addEventListener('click', connectWallet);
-
-// Initialize on page load
-window.addEventListener('load', checkConnectedWallet);
-
+        // Start animations
+        animateBlocks();
     </script>
 </body>
 </html>
