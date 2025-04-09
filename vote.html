@@ -10,7 +10,18 @@
             --secondary: #6e8efb;
             --dark: #2c3e50;
             --light: #f8f9fa;
+            --danger: #e74c3c;
         }
+        .voted-badge {
+    margin-left: auto;
+    font-size: 1rem;
+    font-weight: bold;
+    color: green;
+    background-color: #e8f5e9;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+}
+
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -53,6 +64,20 @@
             border-color: var(--primary);
             transform: translateY(-3px);
         }
+        #switch-wallet-btn {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 15px;
+  padding: 0.2rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+#switch-wallet-btn:hover {
+  background: var(--primary);
+  color: white;
+}
         
         .vote-btn {
             margin-left: auto;
@@ -62,6 +87,23 @@
             padding: 0.5rem 1.5rem;
             border-radius: 20px;
             cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .cancel-vote-btn {
+            margin-left: auto;
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .vote-btn:hover, .cancel-vote-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
         }
         
         .already-voted {
@@ -69,6 +111,11 @@
             font-weight: bold;
             text-align: center;
             padding: 2rem;
+        }
+        
+        .user-voted {
+            border: 2px solid var(--primary);
+            background-color: rgba(78, 68, 206, 0.05);
         }
     </style>
 </head>
@@ -79,6 +126,12 @@
             <a href="/">Home</a>
             <a href="/results">Results</a>
             <span id="wallet-display" style="font-weight:bold; color: var(--primary);"></span>
+            <span id="wallet-display" style="font-weight:bold; color: var(--primary);"></span>
+            <button id="switch-wallet-btn" 
+        onclick="resetWalletConnection()" 
+        style="margin-left: 8px; padding: 2px 8px; font-size: 0.8em;">
+  🔄 Switch Wallet
+</button>
         </nav>
     </header>
 
@@ -98,141 +151,330 @@
         // DOM Elements
         const candidatesList = document.getElementById('candidates-list');
         const votingStatus = document.getElementById('voting-status');
+        let userVotedCandidateId = null;
         
         // Load candidates when page loads
-        window.addEventListener('load', loadCandidates);
+        window.addEventListener('load', async () => {
+            await connectWallet();
+            await loadCandidates();
+        });
+// Add this after your existing connectWallet() function
+let isManualDisconnect = false; // Global flag to track manual disconnects
 
-        async function loadCandidates() {
-            try {
-                // Fetch candidates from Flask API
-                const response = await fetch('/candidates');
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load candidates');
+async function resetWalletConnection() {
+  try {
+    // 1. Clear local storage to remove cached connections
+    const keysToClear = ['WEB3_CONNECT_CACHED_PROVIDER', 'walletconnect'];
+    keysToClear.forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+
+    // 2. Remove event listeners to reset state
+    if (window.ethereum?.removeAllListeners) {
+      window.ethereum.removeAllListeners('accountsChanged');
+      window.ethereum.removeAllListeners('chainChanged');
+    }
+
+    // 3. Update UI to reflect disconnection
+    document.getElementById('wallet-display').textContent = 'Disconnected';
+    userVotedCandidateId = null;
+
+    // 4. MetaMask needs user to manually switch — we prompt a fresh connect
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      alert("No wallet connected.");
+      return;
+    }
+
+    const userAddress = accounts[0];
+
+    // 5. Update UI
+    document.getElementById('wallet-display').textContent =
+      `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+
+    // 6. Check vote status again
+    const response = await fetch(`/has-voted?address=${userAddress}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.hasVoted) {
+        userVotedCandidateId = data.candidateId;
+      }
+    }
+
+    await loadCandidates();
+
+  } catch (err) {
+    console.error("Reset failed:", err);
+    alert("Could not reset wallet. You may need to manually disconnect or switch accounts in MetaMask.");
+  }
+}
+
+
+// Dummy handlers (replace with your actual handlers if they exist)
+function handleChainChanged() {}
+function handleAccountsChanged() {}
+// Update your connectWallet function
+async function connectWallet(forceNew = false) {
+  if (window.ethereum) {
+    try {
+      // 1. Nuclear reset if forcing new connection
+      if (forceNew) {
+        // Clear ALL wallet connection caches
+        localStorage.removeItem('WEB3_CONNECT_CACHED_PROVIDER');
+        localStorage.removeItem('walletconnect');
+        sessionStorage.clear();
+        
+        // Disconnect providers if possible
+        if (window.ethereum.disconnect) await window.ethereum.disconnect();
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener('chainChanged');
+          window.ethereum.removeListener('accountsChanged');
+        }
+      }
+
+      // 2. Request fresh connection
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
+      const userAddress = accounts[0];
+      
+      // 3. Update UI
+      document.getElementById('wallet-display').textContent = 
+        `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+      
+      // 4. Check voting status
+      const response = await fetch(`/has-voted?address=${userAddress}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.hasVoted) {
+          userVotedCandidateId = data.candidateId;
+        }
+      }
+      
+      return userAddress;
+      
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      return null;
+    }
+  } else {
+    alert('Please install MetaMask or another Ethereum wallet.');
+    return null;
+  }
+}
+
+// Add event listener for the switch button
+document.getElementById('switch-wallet-btn').addEventListener('click', resetWalletConnection);
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_requestAccounts' 
+                    });
+                    const userAddress = accounts[0];
+                    
+                    // Display wallet address
+                    document.getElementById('wallet-display').textContent = 
+                        `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+                    
+                    // Check if user has already voted
+                    const response = await fetch(`/has-voted?address=${userAddress}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.hasVoted) {
+                            userVotedCandidateId = data.candidateId;
+                        }
+                    }
+                    
+                    return userAddress;
+                } catch (error) {
+                    console.error('Error connecting wallet:', error);
+                    return null;
                 }
-                
-                const candidates = await response.json();
-                
-                // Display candidates
-                candidatesList.innerHTML = '';
-                candidates.forEach(candidate => {
-                    const card = document.createElement('div');
-                    card.className = 'candidate-card';
-                    card.innerHTML = `
-                        <div style="flex-grow: 1;">
-                            <h3>${candidate.name}</h3>
-                            <p>Current Votes: ${candidate.votes}</p>
-                        </div>
-                        <button class="vote-btn" data-candidate-id="${candidate.id}">
-                            Vote
-                        </button>
-                    `;
-                    candidatesList.appendChild(card);
-                });
-                
-                // Add click handlers
-                document.querySelectorAll('.vote-btn').forEach(btn => {
-                    btn.addEventListener('click', handleVote);
-                });
-                
-            } catch (error) {
-                console.error('Error:', error);
-                candidatesList.innerHTML = `
-                    <div class="error">
-                        Failed to load candidates. Please try again later.
-                    </div>
-                `;
+            } else {
+                alert('Please install MetaMask or another Ethereum wallet to vote.');
+                return null;
             }
         }
 
-        async function handleVote(event) {
-            const button = event.currentTarget;
-            const candidateId = button.dataset.candidateId;
+        async function loadCandidates() {
+    try {
+        // Fetch candidates
+        const candidatesResponse = await fetch('/candidates');
+        if (!candidatesResponse.ok) throw new Error('Failed to fetch candidates');
+        const candidates = await candidatesResponse.json();
+
+        // Get user address from wallet
+        const userAddress = await connectWallet();
+        if (!userAddress) return;
+
+        // Check if user has voted
+        const userVotedResponse = await fetch(`/has-voted?address=${userAddress}`);
+        if (!userVotedResponse.ok) throw new Error('Failed to check voting status');
+        const userVotedData = await userVotedResponse.json();
+        const userVotedCandidateId = userVotedData.hasVoted ? userVotedData.candidateId : null;
+
+        // Clear and repopulate candidates list
+        candidatesList.innerHTML = '';  // Use the correct variable (candidatesList from line 2)
+
+        candidates.forEach(candidate => {
+            const card = document.createElement('div');
+            card.classList.add('candidate-card');
             
-            try {
-                // Connect wallet
-                const accounts = await window.ethereum.request({ 
-                    method: 'eth_requestAccounts' 
-                });
-                const userAddress = accounts[0];
-                
-                // Display wallet address
-                document.getElementById('wallet-display').textContent = 
-                    `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-                
-                // Disable button during voting
-                button.disabled = true;
-                button.textContent = 'Processing...';
-                
-                // Send vote request
-                const response = await fetch('/vote', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        candidate_id: parseInt(candidateId),
-                        user_address: userAddress
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    alert('Vote successfully recorded!');
-                    // Refresh candidates
-                    loadCandidates();
-                } else {
-                    throw new Error(result.error || 'Voting failed');
+            // Highlight if user voted for this candidate
+            if (userVotedCandidateId === candidate.id) {
+                card.classList.add('user-voted');
+            }
+
+            card.innerHTML = `
+                <div style="flex-grow: 1;">
+                    <h3>${candidate.name}</h3>
+                    <p>Current Votes: ${candidate.votes}</p>
+                </div>
+                ${userVotedCandidateId === candidate.id ? 
+                    `<div>
+                        <span class="voted-badge">✅ Voted</span>
+                        
+                    </div>` :
+                    `<button class="vote-btn" data-candidate-id="${candidate.id}">
+                        Vote
+                    </button>`
                 }
-                
-            } catch (error) {
-                console.error('Voting error:', error);
-                alert(`Error: ${error.message}`);
-                button.disabled = false;
-                button.textContent = 'Vote';
+            `;
+
+            candidatesList.appendChild(card);
+        });
+
+        // Add event listeners for voting buttons
+        document.querySelectorAll('.vote-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const candidateId = e.target.dataset.candidateId;
+                await vote(candidateId);
+            });
+        });
+
+        // Add event listeners for cancel buttons
+        document.querySelectorAll('.cancel-vote-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const candidateId = e.target.dataset.candidateId;
+                await cancelVote(candidateId);
+            });
+        });
+
+    } catch (error) {
+        console.error("Error loading candidates:", error);
+        candidatesList.innerHTML = `
+            <div class="error">
+                Failed to load candidates. Please try again later.
+            </div>
+        `;
+    }
+}
+
+
+        async function vote(candidateId) {
+            const userAddress = await connectWallet();
+            if (!userAddress) return;
+
+            const response = await fetch("/vote", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    candidate_id: candidateId,
+                    user_address: userAddress
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === "sign_required") {
+                try {
+                    const txParams = {
+                        from: userAddress,
+                        to: result.txn_data.to,
+                        data: result.txn_data.data,
+                        gas: result.txn_data.gas,
+                        gasPrice: result.txn_data.gasPrice,
+                        value: result.txn_data.value
+                    };
+
+                    const txHash = await ethereum.request({
+                        method: 'eth_sendTransaction',
+                        params: [txParams]
+                    });
+
+                    alert(`Transaction sent! Hash: ${txHash}`);
+                    // Refresh the candidates list after voting
+                    await loadCandidates();
+                } catch (err) {
+                    console.error("Transaction failed:", err);
+                    alert("Transaction failed. See console for details.");
+                }
+            } else if (result.status === "success") {
+                alert("Vote submitted successfully!");
+                userVotedCandidateId = candidateId;
+                await loadCandidates();
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        }
+
+        async function cancelVote(candidateId) {
+            const userAddress = await connectWallet();
+            if (!userAddress) return;
+
+            if (!confirm("Are you sure you want to cancel your vote? This will require a transaction with gas fees.")) {
+                return;
+            }
+
+            const response = await fetch("/cancel-vote", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    candidate_id: candidateId,
+                    user_address: userAddress
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === "sign_required") {
+                try {
+                    const txParams = {
+                        from: userAddress,
+                        to: result.txn_data.to,
+                        data: result.txn_data.data,
+                        gas: result.txn_data.gas,
+                        gasPrice: result.txn_data.gasPrice,
+                        value: result.txn_data.value
+                    };
+
+                    const txHash = await ethereum.request({
+                        method: 'eth_sendTransaction',
+                        params: [txParams]
+                    });
+
+                    alert(`Transaction sent! Hash: ${txHash}`);
+                    // Refresh the candidates list after canceling vote
+                    userVotedCandidateId = null;
+                    await loadCandidates();
+                } catch (err) {
+                    console.error("Transaction failed:", err);
+                    alert("Transaction failed. See console for details.");
+                }
+            } else if (result.status === "success") {
+                alert("Vote canceled successfully!");
+                userVotedCandidateId = null;
+                await loadCandidates();
+            } else {
+                alert(`Error: ${result.error}`);
             }
         }
     </script>
-	<script>
-		async function submitVote(candidateId) {
-			try {
-				// 1. Get user address
-				const accounts = await window.ethereum.request({ 
-					method: 'eth_requestAccounts' 
-				});
-				const userAddress = accounts[0];
-		
-				// 2. Send vote request
-				const response = await fetch('/vote', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						candidate_id: parseInt(candidateId), // Ensure number
-						user_address: userAddress
-					})
-				});
-		
-				// 3. Handle response
-				const result = await response.json();
-				if (!response.ok) throw new Error(result.error || 'Voting failed');
-				
-				alert(`Vote successful! Transaction hash: ${result.txn_hash}`);
-				console.log("Receipt:", result);
-				
-			} catch (error) {
-				console.error("Voting error:", error);
-				alert(`Error: ${error.message}`);
-			}
-		}
-		
-		// Attach to vote buttons
-		document.querySelectorAll('.vote-btn').forEach(btn => {
-			btn.addEventListener('click', (e) => {
-				const candidateId = e.target.dataset.candidateId;
-				submitVote(candidateId);
-			});
-		});
-		</script>
 </body>
 </html>
